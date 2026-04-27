@@ -165,6 +165,17 @@ CREATE OR REPLACE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION handle_new_user();
 
+-- Damage all addictions for a user
+CREATE OR REPLACE FUNCTION damage_all_addictions(p_user_id UUID, p_damage INT)
+RETURNS VOID AS $$
+BEGIN
+  UPDATE addictions
+  SET power = GREATEST(0, power - p_damage),
+      updated_at = NOW()
+  WHERE user_id = p_user_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
 -- Update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at()
 RETURNS TRIGGER AS $$

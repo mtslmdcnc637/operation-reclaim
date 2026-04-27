@@ -96,19 +96,17 @@ SaaS B2C de saúde digital e desenvolvimento pessoal que combina ciência compor
 
 ### Prioridade Alta
 
-1. **Integrar Supabase Auth no frontend**
-   - O frontend atual usa localStorage para auth
-   - Precisa trocar para Supabase Auth real (signUp/signIn/signOut)
-   - Os endpoints de backend já usam Supabase Auth
-   - Arquivo: `src/components/auth/AuthModal.tsx`
+1. ~~**Integrar Supabase Auth no frontend**~~ ✅ FEITO
+   - AuthModal usa `supabase.auth.signUp()` e `signInWithPassword()`
+   - Landing page verifica sessão Supabase
+   - Dashboard carrega estado do Supabase via `loadState()`
 
-2. **Integrar game state com Supabase**
-   - O Zustand store atual salva tudo no localStorage
-   - Precisa chamar as API routes (`/api/game/*`) em vez de manipular estado local
-   - Arquivo: `src/lib/store/index.ts`
+2. ~~**Integrar game state com Supabase**~~ ✅ FEITO
+   - Store chama API routes (`/api/game/*`) em vez de localStorage
+   - Check-in, missões e ataques salvos no banco via API
+   - `loadState()` busca profile, game_state e addictions do Supabase
 
-3. **Configurar Webhook do Stripe**
-   - O endpoint `/api/stripe/webhook` existe mas precisa ser configurado no painel do Stripe
+3. **Configurar Webhook do Stripe** — Precisa de ação manual
    - Stripe Dashboard → Developers → Webhooks → Add endpoint
    - URL: `https://operation-reclaim.vercel.app/api/stripe/webhook`
    - Events: `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.payment_failed`

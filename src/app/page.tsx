@@ -47,8 +47,8 @@ export default function LandingPage() {
       </div>
 
       {/* Nav */}
-      <nav className="fixed top-0 w-full z-50 glass">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <nav className="fixed top-0 w-full z-50 glass" style={{ padding: 0 }}>
+        <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-2">
               <Shield className="w-6 h-6 text-[var(--accent)]" />
@@ -101,7 +101,7 @@ export default function LandingPage() {
       </nav>
 
       {/* ===== HERO ===== */}
-      <section className="relative min-h-screen flex flex-col items-center justify-center px-4 pt-16">
+      <section className="relative min-h-screen flex flex-col items-center justify-center px-6 sm:px-8 pt-16">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--accent-glow)_0%,_transparent_70%)] opacity-20" />
 
         <div className="relative z-10 text-center max-w-4xl stagger-children">
@@ -142,7 +142,7 @@ export default function LandingPage() {
       </section>
 
       {/* ===== A VERDADE ===== */}
-      <section id="truth" className="py-24 px-4">
+      <section id="truth" className="py-24 px-6 sm:px-8">
         <div className="max-w-4xl mx-auto">
           <div className="text-xs font-mono tracking-[0.3em] uppercase text-[var(--accent)] mb-4">A Verdade</div>
           <h2 className="text-3xl sm:text-5xl font-bold mb-8">
@@ -162,14 +162,14 @@ export default function LandingPage() {
               { stat: '41%', label: 'Gamers com comportamento compulsivo' },
               { stat: '73%', label: 'Recaem em menos de 30 dias sozinhos' },
             ].map((item, i) => (
-              <div key={i} className="glass p-4 rounded">
+              <div key={i} className="glass p-5 rounded-lg">
                 <div className="text-2xl font-bold text-[var(--accent)]">{item.stat}</div>
                 <div className="text-sm text-[var(--text-muted)]">{item.label}</div>
               </div>
             ))}
           </div>
 
-          <blockquote className="border-l-4 border-[var(--accent)] pl-6 py-4 bg-[rgba(196,30,58,0.05)] rounded-r">
+          <blockquote className="border-l-4 border-[var(--accent)] bg-[rgba(196,30,58,0.05)] rounded-r" style={{ paddingLeft: '1.5rem', paddingRight: '1.5rem', paddingTop: '1rem', paddingBottom: '1rem' }}>
             <p className="text-lg italic text-[var(--text-muted)]">
               &quot;Não é sobre força de vontade. É sobre sistema. Willpower sozinho falha.
               Precisa de identidade, ambiente, substituição e recompensa.&quot;
@@ -180,7 +180,7 @@ export default function LandingPage() {
       </section>
 
       {/* ===== OS TRÊS INIMIGOS ===== */}
-      <section id="enemies" className="py-24 px-4 bg-[rgba(0,0,0,0.3)]">
+      <section id="enemies" className="py-24 px-6 sm:px-8 bg-[rgba(0,0,0,0.3)]">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
             <div className="text-xs font-mono tracking-[0.3em] uppercase text-[var(--accent)] mb-4">Identifique o Inimigo</div>
@@ -213,8 +213,8 @@ export default function LandingPage() {
             ].map((enemy, i) => (
               <div
                 key={i}
-                className="glass p-6 rounded-lg hover:border-t-2 hover:-translate-y-1 transition-all duration-300 group"
-                style={{ '--hover-color': enemy.color } as React.CSSProperties}
+                className="glass rounded-lg hover:border-t-2 hover:-translate-y-1 transition-all duration-300 group"
+                style={{ padding: '1.5rem' } as React.CSSProperties}
               >
                 <div className="text-4xl mb-4">{enemy.icon}</div>
                 <h3 className="text-xl font-bold mb-2">{enemy.title}</h3>
@@ -227,7 +227,7 @@ export default function LandingPage() {
       </section>
 
       {/* ===== O PROTOCOLO ===== */}
-      <section id="protocol" className="py-24 px-4">
+      <section id="protocol" className="py-24 px-6 sm:px-8">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
             <div className="text-xs font-mono tracking-[0.3em] uppercase text-[var(--gold)] mb-4">
@@ -243,7 +243,7 @@ export default function LandingPage() {
               { step: '03', title: 'Substituição', desc: 'Troque o vício por algo melhor. 2 minutos de ação real.', icon: ArrowRight },
               { step: '04', title: 'Gamificação', desc: 'XP, ranks, conquistas. Cada vitória conta. Cada dia importa.', icon: Zap },
             ].map((item, i) => (
-              <div key={i} className="glass p-6 rounded-lg text-center">
+              <div key={i} className="glass rounded-lg text-center" style={{ padding: '1.5rem' }}>
                 <div className="text-xs font-mono text-[var(--accent)] mb-3">{item.step}</div>
                 <item.icon className="w-8 h-8 mx-auto mb-4 text-[var(--gold)]" />
                 <h3 className="text-lg font-bold mb-2">{item.title}</h3>
@@ -274,7 +274,7 @@ export default function LandingPage() {
       </section>
 
       {/* ===== PRICING ===== */}
-      <section id="pricing" className="py-24 px-4 bg-[rgba(0,0,0,0.3)]">
+      <section id="pricing" className="py-24 px-6 sm:px-8 bg-[rgba(0,0,0,0.3)]">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
             <div className="text-xs font-mono tracking-[0.3em] uppercase text-[var(--accent)] mb-4">Escolha seu Rank</div>
@@ -285,7 +285,8 @@ export default function LandingPage() {
             {PRICING_PLANS.map((plan) => (
               <div
                 key={plan.id}
-                className={`glass p-8 rounded-lg relative ${plan.popular ? 'border-[var(--accent)] border-2' : ''}`}
+                className={`glass rounded-lg relative ${plan.popular ? 'border-[var(--accent)] border-2' : ''}`}
+                style={{ padding: '2rem' }}
               >
                 {plan.popular && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 bg-[var(--accent)] text-white text-xs font-mono tracking-wider rounded">
@@ -329,7 +330,7 @@ export default function LandingPage() {
       </section>
 
       {/* ===== CTA FINAL ===== */}
-      <section className="py-32 px-4 relative">
+      <section className="py-32 px-6 sm:px-8 relative">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--accent-glow)_0%,_transparent_60%)] opacity-10" />
         <div className="relative z-10 text-center max-w-3xl mx-auto">
           <h2 className="text-4xl sm:text-6xl font-black mb-6">
@@ -349,7 +350,7 @@ export default function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="py-8 px-4 border-t border-[var(--border)]">
+      <footer className="py-8 px-6 sm:px-8 border-t border-[var(--border)]">
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <Shield className="w-4 h-4 text-[var(--accent)]" />

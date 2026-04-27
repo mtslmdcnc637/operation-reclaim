@@ -39,6 +39,32 @@ body {
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  padding: 0;
+  margin: 0;
+}
+
+/* Ensure sections have padding */
+section {
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+}
+
+@media (min-width: 64rem) {
+  section {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+}
+
+/* Main content area */
+main {
+  padding: 1.5rem;
+}
+
+@media (min-width: 64rem) {
+  main {
+    padding: 2rem;
+  }
 }
 
 ::selection {
@@ -204,6 +230,8 @@ body {
   background: rgba(18, 18, 26, 0.8);
   backdrop-filter: blur(12px);
   border: 1px solid var(--border);
+  padding: 1.5rem;
+  border-radius: 0.75rem;
 }
 
 .glass-hover:hover {

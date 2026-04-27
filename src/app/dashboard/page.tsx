@@ -36,7 +36,7 @@ export default function DashboardHome() {
   const completedToday = dailyMissions.filter(m => m.completed).length;
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8">
+    <div className="max-w-6xl mx-auto space-y-8" style={{ padding: '0 0.5rem' }}>
       {/* Daily Quote */}
       <div className="glass rounded-lg p-6 border-l-4 border-[var(--accent)]">
         <p className="text-base sm:text-lg italic text-[var(--text-muted)]">&quot;{quote.text}&quot;</p>

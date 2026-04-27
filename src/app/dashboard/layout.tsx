@@ -45,8 +45,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <div className="min-h-screen flex">
       {/* Sidebar - Desktop */}
-      <aside className="hidden lg:flex flex-col w-64 border-r border-[var(--border)] bg-[var(--bg)] h-screen sticky top-0">
-        <div className="p-6 border-b border-[var(--border)]">
+      <aside className="hidden lg:flex flex-col w-64 border-r border-[var(--border)] bg-[var(--bg)] h-screen sticky top-0" style={{ padding: 0 }}>
+        <div className="border-b border-[var(--border)]" style={{ padding: '1.5rem' }}>
           <div className="flex items-center gap-2 mb-4">
             <Shield className="w-5 h-5 text-[var(--accent)]" />
             <span className="font-bold text-sm tracking-tight">
@@ -89,7 +89,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
         </div>
 
-        <nav className="flex-1 p-4 space-y-1">
+        <nav className="flex-1 space-y-1" style={{ padding: '1rem' }}>
           {NAV_ITEMS.map(item => {
             const isActive = currentScreen === item.id;
             return (
@@ -111,7 +111,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </nav>
 
         {/* Emergency Button */}
-        <div className="p-4 border-t border-[var(--border)]">
+        <div className="border-t border-[var(--border)]" style={{ padding: '1rem' }}>
           {gameState.level >= 3 && (
             <a
               href="/dashboard?emergency=true"
@@ -205,7 +205,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 p-4 lg:p-8 overflow-y-auto">
+        <main className="flex-1 overflow-y-auto" style={{ padding: '1.5rem' }}>
           {children}
         </main>
       </div>

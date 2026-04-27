@@ -11,8 +11,8 @@ export async function POST(request: NextRequest) {
     }
 
     const priceMap: Record<string, string> = {
-      agente: process.env.STRIPE_PRICE_AGENTE || 'price_agente',
-      diretor: process.env.STRIPE_PRICE_DIRETOR || 'price_diretor',
+      agente: process.env.STRIPE_PRICE_AGENTE!,
+      diretor: process.env.STRIPE_PRICE_DIRETOR!,
     };
 
     const priceId = priceMap[planId];

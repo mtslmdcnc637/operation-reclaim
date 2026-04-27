@@ -7,8 +7,8 @@ import { Target, Swords, Flame } from 'lucide-react';
 export default function EnemiesPage() {
   const { addictions, attackEnemy, gameState } = useStore();
 
-  const handleAttack = (addictionId: string) => {
-    attackEnemy(addictionId);
+  const handleAttack = async (addictionId: string) => {
+    await attackEnemy(addictionId);
   };
 
   const canAttack = (addictionId: string) => {

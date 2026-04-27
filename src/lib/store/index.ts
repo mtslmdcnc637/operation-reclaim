@@ -1,353 +1,304 @@
 import { create } from 'zustand';
 import { GameState, Addiction, DailyMission, Notification, AddictionType, PlanTier } from '@/types';
 import { ADDICTIONS } from '@/lib/data';
+import { createClient } from '@/lib/supabase/client';
 import {
   generateDailyMissions,
-  calculateStreak,
-  addXp,
-  checkAchievements,
-  calculateDailyCheckinDamage,
-  calculateAttackDamage,
   getLevelFromXp,
+  getRankForLevel,
+  getStreakMultiplier,
+  checkAchievements,
 } from '@/lib/game-engine';
 
 interface AppStore {
-  // Auth
   isAuthenticated: boolean;
-  user: { email: string; codeName: string; plan: PlanTier } | null;
-
-  // Game State
+  user: { id: string; email: string; codeName: string; plan: PlanTier } | null;
   gameState: GameState;
   addictions: Addiction[];
   dailyMissions: DailyMission[];
-
-  // UI
   notifications: Notification[];
   showLevelUp: boolean;
   levelUpData: { level: number; rank: string } | null;
   currentScreen: string;
 
-  // Actions
-  login: (email: string, codeName: string, plan?: PlanTier) => void;
+  login: (id: string, email: string, codeName: string, plan?: PlanTier, gs?: Partial<GameState>, adds?: Addiction[]) => void;
   logout: () => void;
-  checkin: () => { xpGained: number; leveledUp: boolean };
-  completeMission: (missionId: string) => { xpGained: number; leveledUp: boolean; allDone: boolean };
-  attackEnemy: (addictionId: string) => { xpGained: number; leveledUp: boolean };
-  useEmergency: () => void;
+  checkin: () => Promise<{ xpGained: number; leveledUp: boolean }>;
+  completeMission: (missionId: string) => Promise<{ xpGained: number; leveledUp: boolean; allDone: boolean }>;
+  attackEnemy: (addictionId: string) => Promise<{ xpGained: number; leveledUp: boolean }>;
+  useEmergency: () => Promise<void>;
   addNotification: (type: Notification['type'], message: string) => void;
   removeNotification: (id: string) => void;
   dismissLevelUp: () => void;
   setScreen: (screen: string) => void;
-  regenerateMissions: () => void;
-  updatePlan: (plan: PlanTier) => void;
+  loadState: () => Promise<void>;
 }
 
 const INITIAL_GAME_STATE: GameState = {
-  level: 1,
-  xp: 0,
-  totalXp: 0,
-  streak: 0,
-  lastCheckin: null,
-  totalDays: 0,
-  totalMissions: 0,
-  primaryAddiction: 'socialMedia',
-  achievements: [],
-  completedMissionIds: [],
-  dailyMissionIds: [],
-  lastMissionDate: null,
-  attackCooldowns: {},
-  emergencyUsedToday: false,
+  level: 1, xp: 0, totalXp: 0, streak: 0, lastCheckin: null,
+  totalDays: 0, totalMissions: 0, primaryAddiction: 'socialMedia',
+  achievements: [], completedMissionIds: [], dailyMissionIds: [],
+  lastMissionDate: null, attackCooldowns: {}, emergencyUsedToday: false,
 };
 
-function loadState(): { gameState: GameState; user: AppStore['user'] } {
-  if (typeof window === 'undefined') return { gameState: INITIAL_GAME_STATE, user: null };
+export const useStore = create<AppStore>((set, get) => ({
+  isAuthenticated: false,
+  user: null,
+  gameState: INITIAL_GAME_STATE,
+  addictions: ADDICTIONS.map(a => ({ ...a, power: 100 })),
+  dailyMissions: [],
+  notifications: [],
+  showLevelUp: false,
+  levelUpData: null,
+  currentScreen: 'home',
 
-  try {
-    const current = localStorage.getItem('or_current');
-    if (!current) return { gameState: INITIAL_GAME_STATE, user: null };
+  login: (id, email, codeName, plan = 'recruta', gs, adds) => {
+    const gameState = { ...INITIAL_GAME_STATE, ...gs };
+    const addictions = adds && adds.length > 0
+      ? adds
+      : ADDICTIONS.map(a => ({ ...a, power: 100 }));
+    const missions = generateDailyMissions(gameState.primaryAddiction, plan);
 
-    const userData = localStorage.getItem(`or_user_${current}`);
-    if (!userData) return { gameState: INITIAL_GAME_STATE, user: null };
+    set({
+      isAuthenticated: true,
+      user: { id, email, codeName, plan },
+      gameState,
+      addictions,
+      dailyMissions: missions.map(m => ({ ...m, completed: gameState.completedMissionIds.includes(m.id) })),
+    });
+  },
 
-    const parsed = JSON.parse(userData);
-    return {
-      gameState: { ...INITIAL_GAME_STATE, ...parsed.gameState },
-      user: { email: parsed.email, codeName: parsed.codeName, plan: parsed.plan || 'recruta' },
-    };
-  } catch {
-    return { gameState: INITIAL_GAME_STATE, user: null };
-  }
-}
+  logout: async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    set({
+      isAuthenticated: false,
+      user: null,
+      gameState: INITIAL_GAME_STATE,
+      dailyMissions: [],
+      addictions: ADDICTIONS.map(a => ({ ...a, power: 100 })),
+    });
+  },
 
-function saveState(user: AppStore['user'], gameState: GameState) {
-  if (typeof window === 'undefined' || !user) return;
-  localStorage.setItem(`or_user_${user.email}`, JSON.stringify({
-    email: user.email,
-    codeName: user.codeName,
-    plan: user.plan,
-    gameState,
-  }));
-  localStorage.setItem('or_current', user.email);
-}
+  loadState: async () => {
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
 
-export const useStore = create<AppStore>((set, get) => {
-  const loaded = loadState();
-
-  return {
-    isAuthenticated: !!loaded.user,
-    user: loaded.user,
-    gameState: loaded.gameState,
-    addictions: ADDICTIONS.map(a => ({ ...a, power: 100 })),
-    dailyMissions: [],
-    notifications: [],
-    showLevelUp: false,
-    levelUpData: null,
-    currentScreen: 'home',
-
-    login: (email, codeName, plan = 'recruta') => {
-      const existing = localStorage.getItem(`or_user_${email}`);
-      let gameState = INITIAL_GAME_STATE;
-
-      if (existing) {
-        const parsed = JSON.parse(existing);
-        gameState = { ...INITIAL_GAME_STATE, ...parsed.gameState };
+      const res = await fetch('/api/game/state');
+      if (!res.ok) {
+        // User exists in auth but not in profiles table — might be first login
+        // Try to create profile via the register endpoint or just use auth data
+        const codeName = user.user_metadata?.code_name || user.email?.split('@')[0] || 'Agente';
+        get().login(user.id, user.email || '', codeName);
+        return;
       }
 
-      const user = { email, codeName, plan };
-      localStorage.setItem('or_current', email);
-      if (!existing) {
-        saveState(user, gameState);
-      }
+      const data = await res.json();
+      const gs: GameState = {
+        level: data.gameState?.level || 1,
+        xp: data.gameState?.xp || 0,
+        totalXp: data.gameState?.total_xp || 0,
+        streak: data.gameState?.streak || 0,
+        lastCheckin: data.gameState?.last_checkin || null,
+        totalDays: data.gameState?.total_days || 0,
+        totalMissions: data.gameState?.total_missions || 0,
+        primaryAddiction: data.gameState?.primary_addiction || 'socialMedia',
+        achievements: data.gameState?.achievements || [],
+        completedMissionIds: data.gameState?.completed_mission_ids || [],
+        dailyMissionIds: data.gameState?.daily_mission_ids || [],
+        lastMissionDate: data.gameState?.last_mission_date || null,
+        attackCooldowns: data.gameState?.attack_cooldowns || {},
+        emergencyUsedToday: data.gameState?.emergency_used_today || false,
+      };
 
-      const missions = generateDailyMissions(gameState.primaryAddiction, plan);
+      const adds: Addiction[] = (data.addictions || []).map((a: any) => ({
+        id: a.addiction_type,
+        name: ADDICTIONS.find(ad => ad.id === a.addiction_type)?.name || a.addiction_type,
+        icon: ADDICTIONS.find(ad => ad.id === a.addiction_type)?.icon || '❓',
+        description: ADDICTIONS.find(ad => ad.id === a.addiction_type)?.description || '',
+        power: a.power,
+        color: ADDICTIONS.find(ad => ad.id === a.addiction_type)?.color || '#fff',
+      }));
 
-      set({
-        isAuthenticated: true,
-        user,
-        gameState,
-        dailyMissions: missions.map(m => ({ ...m, completed: gameState.completedMissionIds.includes(m.id) })),
-        addictions: ADDICTIONS.map(a => ({ ...a, power: 100 })),
-      });
-    },
+      const codeName = data.profile?.code_name || user.user_metadata?.code_name || user.email?.split('@')[0] || 'Agente';
+      const plan = data.profile?.plan || 'recruta';
 
-    logout: () => {
-      localStorage.removeItem('or_current');
-      set({
-        isAuthenticated: false,
-        user: null,
-        gameState: INITIAL_GAME_STATE,
-        dailyMissions: [],
-        addictions: ADDICTIONS.map(a => ({ ...a, power: 100 })),
-      });
-    },
+      get().login(user.id, user.email || '', codeName, plan, gs, adds);
+    } catch (err) {
+      console.error('loadState error:', err);
+    }
+  },
 
-    checkin: () => {
-      const { gameState, user, addictions } = get();
-      const today = new Date().toISOString().split('T')[0];
-
-      if (gameState.lastCheckin?.startsWith(today)) {
-        get().addNotification('error', 'Check-in já realizado hoje.');
+  checkin: async () => {
+    try {
+      const res = await fetch('/api/game/checkin', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) {
+        get().addNotification('error', data.error || 'Erro no check-in');
         return { xpGained: 0, leveledUp: false };
       }
 
-      const newStreak = calculateStreak(gameState.lastCheckin, gameState.streak);
-      const result = addXp(gameState, 50);
-
-      // Damage all addictions
-      const damage = calculateDailyCheckinDamage();
-      const newAddictions = addictions.map(a => ({
-        ...a,
-        power: Math.max(0, a.power - damage),
-      }));
-
-      const newState: GameState = {
+      const { gameState } = get();
+      const newGs: GameState = {
         ...gameState,
-        level: result.levelAfter,
-        xp: result.totalXp - (result.totalXp - result.xpGained),
-        totalXp: result.totalXp,
-        streak: newStreak,
+        level: data.level,
+        totalXp: data.totalXp,
+        streak: data.streak,
         lastCheckin: new Date().toISOString(),
         totalDays: gameState.totalDays + 1,
       };
+      newGs.achievements = [...gameState.achievements, ...checkAchievements(newGs)];
 
-      // Check achievements
-      const newAchievements = checkAchievements(newState);
-      newState.achievements = [...newState.achievements, ...newAchievements];
+      set({ gameState: newGs });
+      get().addNotification('xp', `+${data.xpGained} XP — Check-in diário`);
 
-      saveState(user, newState);
-      set({ gameState: newState, addictions: newAddictions });
-
-      get().addNotification('xp', `+${result.xpGained} XP — Check-in diário`);
-
-      if (result.leveledUp) {
-        set({
-          showLevelUp: true,
-          levelUpData: { level: result.levelAfter, rank: result.rankAfter },
-        });
+      const rank = getRankForLevel(data.level);
+      if (data.level > gameState.level) {
+        set({ showLevelUp: true, levelUpData: { level: data.level, rank } });
       }
 
-      return { xpGained: result.xpGained, leveledUp: result.leveledUp };
-    },
+      return { xpGained: data.xpGained, leveledUp: data.level > gameState.level };
+    } catch (err) {
+      get().addNotification('error', 'Erro de conexão');
+      return { xpGained: 0, leveledUp: false };
+    }
+  },
 
-    completeMission: (missionId) => {
-      const { gameState, user, dailyMissions, addictions } = get();
+  completeMission: async (missionId) => {
+    try {
+      const { dailyMissions } = get();
       const mission = dailyMissions.find(m => m.id === missionId);
       if (!mission || mission.completed) return { xpGained: 0, leveledUp: false, allDone: false };
 
-      const result = addXp(gameState, mission.xp);
-
-      // Damage the linked addiction
-      const newAddictions = addictions.map(a =>
-        a.id === mission.addiction
-          ? { ...a, power: Math.max(0, a.power - mission.damage) }
-          : a
-      );
-
-      const newCompletedIds = [...gameState.completedMissionIds, missionId];
-      const allDone = newCompletedIds.length >= dailyMissions.length;
-
-      let bonusXp = 0;
-      if (allDone) {
-        const bonusResult = addXp({ ...gameState, totalXp: result.totalXp }, 150);
-        bonusXp = bonusResult.xpGained;
-        result.totalXp = bonusResult.totalXp;
-        result.levelAfter = bonusResult.levelAfter;
-        result.leveledUp = result.leveledUp || bonusResult.leveledUp;
-        result.rankAfter = bonusResult.rankAfter;
+      const res = await fetch('/api/game/mission', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          missionId,
+          missionXp: mission.xp,
+          missionDamage: mission.damage,
+          addictionType: mission.addiction,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        get().addNotification('error', data.error || 'Erro na missão');
+        return { xpGained: 0, leveledUp: false, allDone: false };
       }
 
-      const newState: GameState = {
+      const { gameState, addictions } = get();
+      const newCompletedIds = [...gameState.completedMissionIds, missionId];
+      const newMissions = dailyMissions.map(m => m.id === missionId ? { ...m, completed: true } : m);
+      const newAddictions = addictions.map(a =>
+        a.id === mission.addiction ? { ...a, power: Math.max(0, a.power - mission.damage) } : a
+      );
+
+      const newGs: GameState = {
         ...gameState,
-        level: result.levelAfter,
-        totalXp: result.totalXp,
+        level: data.level,
+        totalXp: data.totalXp,
         totalMissions: gameState.totalMissions + 1,
         completedMissionIds: newCompletedIds,
         lastMissionDate: new Date().toISOString().split('T')[0],
       };
+      newGs.achievements = [...gameState.achievements, ...checkAchievements(newGs)];
 
-      const newAchievements = checkAchievements(newState);
-      newState.achievements = [...newState.achievements, ...newAchievements];
+      set({ gameState: newGs, dailyMissions: newMissions, addictions: newAddictions });
+      get().addNotification('xp', `+${data.xpGained} XP — ${mission.title}`);
 
-      const newMissions = dailyMissions.map(m =>
-        m.id === missionId ? { ...m, completed: true } : m
-      );
-
-      saveState(user, newState);
-      set({ gameState: newState, dailyMissions: newMissions, addictions: newAddictions });
-
-      get().addNotification('xp', `+${result.xpGained} XP — ${mission.title}`);
-      if (allDone) {
-        get().addNotification('xp', `+${bonusXp} XP — Bônus: todas as missões completas!`);
+      if (data.allDone) {
+        get().addNotification('xp', `+${data.bonusXp || 150} XP — Bônus: todas as missões!`);
       }
 
-      if (result.leveledUp) {
-        set({
-          showLevelUp: true,
-          levelUpData: { level: result.levelAfter, rank: result.rankAfter },
-        });
+      const rank = getRankForLevel(data.level);
+      if (data.level > gameState.level) {
+        set({ showLevelUp: true, levelUpData: { level: data.level, rank } });
       }
 
-      return { xpGained: result.xpGained, leveledUp: result.leveledUp, allDone };
-    },
+      return { xpGained: data.xpGained, leveledUp: data.level > gameState.level, allDone: data.allDone };
+    } catch (err) {
+      get().addNotification('error', 'Erro de conexão');
+      return { xpGained: 0, leveledUp: false, allDone: false };
+    }
+  },
 
-    attackEnemy: (addictionId) => {
-      const { gameState, user, addictions } = get();
-      const today = new Date().toISOString().split('T')[0];
-
-      if (gameState.attackCooldowns[addictionId]?.startsWith(today)) {
-        get().addNotification('error', 'Ataque já realizado hoje neste inimigo.');
+  attackEnemy: async (addictionId) => {
+    try {
+      const res = await fetch('/api/game/attack', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ addictionId }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        get().addNotification('error', data.error || 'Erro no ataque');
         return { xpGained: 0, leveledUp: false };
       }
 
-      const damage = calculateAttackDamage();
-      const result = addXp(gameState, 30);
+      const { gameState, addictions } = get();
+      const newGs: GameState = {
+        ...gameState,
+        level: data.level,
+        totalXp: data.totalXp,
+        attackCooldowns: { ...gameState.attackCooldowns, [addictionId]: new Date().toISOString() },
+      };
+      newGs.achievements = [...gameState.achievements, ...checkAchievements(newGs)];
 
       const newAddictions = addictions.map(a =>
-        a.id === addictionId
-          ? { ...a, power: Math.max(0, a.power - damage) }
-          : a
+        a.id === addictionId ? { ...a, power: Math.max(0, a.power - 2) } : a
       );
 
-      const newState: GameState = {
-        ...gameState,
-        level: result.levelAfter,
-        totalXp: result.totalXp,
-        attackCooldowns: {
-          ...gameState.attackCooldowns,
-          [addictionId]: new Date().toISOString(),
-        },
-      };
+      set({ gameState: newGs, addictions: newAddictions });
+      get().addNotification('xp', `+${data.xpGained} XP — Ataque direto`);
 
-      const newAchievements = checkAchievements(newState);
-      newState.achievements = [...newState.achievements, ...newAchievements];
-
-      saveState(user, newState);
-      set({ gameState: newState, addictions: newAddictions });
-
-      get().addNotification('xp', `+${result.xpGained} XP — Ataque direto`);
-
-      if (result.leveledUp) {
-        set({
-          showLevelUp: true,
-          levelUpData: { level: result.levelAfter, rank: result.rankAfter },
-        });
+      const rank = getRankForLevel(data.level);
+      if (data.level > gameState.level) {
+        set({ showLevelUp: true, levelUpData: { level: data.level, rank } });
       }
 
-      return { xpGained: result.xpGained, leveledUp: result.leveledUp };
-    },
+      return { xpGained: data.xpGained, leveledUp: data.level > gameState.level };
+    } catch (err) {
+      get().addNotification('error', 'Erro de conexão');
+      return { xpGained: 0, leveledUp: false };
+    }
+  },
 
-    useEmergency: () => {
-      const { gameState, user } = get();
-      const today = new Date().toISOString().split('T')[0];
-
+  useEmergency: async () => {
+    try {
+      const { gameState } = get();
       if (gameState.emergencyUsedToday) {
         get().addNotification('error', 'Modo emergência já usado hoje.');
         return;
       }
 
-      const result = addXp(gameState, 100);
-      const newState: GameState = {
-        ...gameState,
-        level: result.levelAfter,
-        totalXp: result.totalXp,
-        emergencyUsedToday: true,
-      };
+      const res = await fetch('/api/game/checkin', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) {
+        get().addNotification('error', data.error || 'Erro');
+        return;
+      }
 
-      saveState(user, newState);
-      set({ gameState: newState });
-      get().addNotification('xp', `+${result.xpGained} XP — Modo Emergência completado`);
-    },
+      const newGs = { ...gameState, emergencyUsedToday: true };
+      set({ gameState: newGs });
+      get().addNotification('xp', `+100 XP — Modo Emergência completado`);
+    } catch (err) {
+      get().addNotification('error', 'Erro de conexão');
+    }
+  },
 
-    addNotification: (type, message) => {
-      const id = Date.now().toString();
-      set(state => ({
-        notifications: [...state.notifications, { id, type, message }],
-      }));
-      setTimeout(() => get().removeNotification(id), 4000);
-    },
+  addNotification: (type, message) => {
+    const id = Date.now().toString();
+    set(state => ({ notifications: [...state.notifications, { id, type, message }] }));
+    setTimeout(() => get().removeNotification(id), 4000);
+  },
 
-    removeNotification: (id) => {
-      set(state => ({
-        notifications: state.notifications.filter(n => n.id !== id),
-      }));
-    },
+  removeNotification: (id) => {
+    set(state => ({ notifications: state.notifications.filter(n => n.id !== id) }));
+  },
 
-    dismissLevelUp: () => set({ showLevelUp: false, levelUpData: null }),
+  dismissLevelUp: () => set({ showLevelUp: false, levelUpData: null }),
 
-    setScreen: (screen) => set({ currentScreen: screen }),
-
-    regenerateMissions: () => {
-      const { gameState, user } = get();
-      const missions = generateDailyMissions(gameState.primaryAddiction, user?.plan || 'recruta', gameState.completedMissionIds);
-      set({ dailyMissions: missions.map(m => ({ ...m, completed: false })) });
-    },
-
-    updatePlan: (plan) => {
-      const { user, gameState } = get();
-      if (!user) return;
-      const newUser = { ...user, plan };
-      saveState(newUser, gameState);
-      set({ user: newUser });
-    },
-  };
-});
+  setScreen: (screen) => set({ currentScreen: screen }),
+}));

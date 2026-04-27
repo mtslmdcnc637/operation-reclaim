@@ -10,10 +10,22 @@ import {
 } from 'lucide-react';
 
 export default function LandingPage() {
-  const { isAuthenticated } = useStore();
+  const { isAuthenticated, loadState } = useStore();
   const [showAuth, setShowAuth] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'register'>('register');
   const [mobileMenu, setMobileMenu] = useState(false);
+
+  useEffect(() => {
+    // Check Supabase session
+    const checkAuth = async () => {
+      const supabase = (await import('@/lib/supabase/client')).createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        window.location.href = '/dashboard';
+      }
+    };
+    checkAuth();
+  }, []);
 
   useEffect(() => {
     if (isAuthenticated) {

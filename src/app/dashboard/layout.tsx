@@ -17,17 +17,22 @@ const NAV_ITEMS = [
 ];
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, user, gameState, logout, notifications, showLevelUp, levelUpData, dismissLevelUp, currentScreen, setScreen } = useStore();
+  const { isAuthenticated, user, gameState, logout, notifications, showLevelUp, levelUpData, dismissLevelUp, currentScreen, setScreen, loadState } = useStore();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
+    loadState();
   }, []);
 
   useEffect(() => {
     if (mounted && !isAuthenticated) {
-      window.location.href = '/';
+      // Give Supabase time to restore session
+      const timer = setTimeout(() => {
+        if (!isAuthenticated) window.location.href = '/';
+      }, 2000);
+      return () => clearTimeout(timer);
     }
   }, [mounted, isAuthenticated]);
 

@@ -9,8 +9,8 @@ export default function MissionsPage() {
   const completedCount = dailyMissions.filter(m => m.completed).length;
   const allDone = completedCount === dailyMissions.length && dailyMissions.length > 0;
 
-  const handleComplete = (missionId: string) => {
-    completeMission(missionId);
+  const handleComplete = async (missionId: string) => {
+    await completeMission(missionId);
   };
 
   const getDifficultyColor = (diff: string) => {

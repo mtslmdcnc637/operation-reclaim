@@ -23,9 +23,9 @@ export default function DashboardHome() {
     setQuote(DAILY_QUOTES[dayIndex]);
   }, [gameState.lastCheckin]);
 
-  const handleCheckin = () => {
+  const handleCheckin = async () => {
     if (checkedToday) return;
-    const result = checkin();
+    const result = await checkin();
     if (result.xpGained > 0) {
       setCheckedToday(true);
     }

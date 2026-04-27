@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useStore } from '@/lib/store';
+import { createClient } from '@/lib/supabase/client';
 import { X, Shield, Eye, EyeOff } from 'lucide-react';
 
 interface AuthModalProps {
@@ -11,7 +11,6 @@ interface AuthModalProps {
 }
 
 export function AuthModal({ mode, onClose, onSwitchMode }: AuthModalProps) {
-  const { login } = useStore();
   const [email, setEmail] = useState('');
   const [codeName, setCodeName] = useState('');
   const [password, setPassword] = useState('');
@@ -21,25 +20,12 @@ export function AuthModal({ mode, onClose, onSwitchMode }: AuthModalProps) {
 
   const validate = (): boolean => {
     const errs: Record<string, string> = {};
-
-    if (mode === 'register' && !codeName.trim()) {
-      errs.codeName = 'Nome de código é obrigatório';
-    } else if (mode === 'register' && (codeName.length < 2 || codeName.length > 30)) {
-      errs.codeName = 'Entre 2 e 30 caracteres';
-    }
-
-    if (!email.trim()) {
-      errs.email = 'Email é obrigatório';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      errs.email = 'Email inválido';
-    }
-
-    if (!password) {
-      errs.password = 'Senha é obrigatória';
-    } else if (password.length < 6) {
-      errs.password = 'Mínimo 6 caracteres';
-    }
-
+    if (mode === 'register' && !codeName.trim()) errs.codeName = 'Nome de código é obrigatório';
+    else if (mode === 'register' && (codeName.length < 2 || codeName.length > 30)) errs.codeName = 'Entre 2 e 30 caracteres';
+    if (!email.trim()) errs.email = 'Email é obrigatório';
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errs.email = 'Email inválido';
+    if (!password) errs.password = 'Senha é obrigatória';
+    else if (password.length < 6) errs.password = 'Mínimo 6 caracteres';
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -47,82 +33,62 @@ export function AuthModal({ mode, onClose, onSwitchMode }: AuthModalProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validate()) return;
-
     setLoading(true);
 
-    // Simulate auth delay
-    await new Promise(r => setTimeout(r, 800));
+    const supabase = createClient();
 
-    if (mode === 'register') {
-      // Check if user exists
-      const existing = localStorage.getItem(`or_user_${email}`);
-      if (existing) {
-        setErrors({ email: 'Este email já está registrado' });
-        setLoading(false);
-        return;
+    try {
+      if (mode === 'register') {
+        const { error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: { data: { code_name: codeName } },
+        });
+        if (error) {
+          setErrors({ email: error.message });
+          setLoading(false);
+          return;
+        }
+      } else {
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) {
+          setErrors({ email: error.message });
+          setLoading(false);
+          return;
+        }
       }
 
-      // Create user
-      const userData = {
-        email,
-        codeName,
-        plan: 'recruta' as const,
-        gameState: {
-          level: 1, xp: 0, totalXp: 0, streak: 0, lastCheckin: null,
-          totalDays: 0, totalMissions: 0, primaryAddiction: 'socialMedia' as const,
-          achievements: [], completedMissionIds: [], dailyMissionIds: [],
-          lastMissionDate: null, attackCooldowns: {}, emergencyUsedToday: false,
-        },
-      };
-      localStorage.setItem(`or_user_${email}`, JSON.stringify(userData));
-    } else {
-      // Login check
-      const existing = localStorage.getItem(`or_user_${email}`);
-      if (!existing) {
-        setErrors({ email: 'Conta não encontrada' });
-        setLoading(false);
-        return;
-      }
-      const parsed = JSON.parse(existing);
-      // In a real app, we'd verify password with Supabase
+      onClose();
+      window.location.href = '/dashboard';
+    } catch (err: any) {
+      setErrors({ email: err.message || 'Erro inesperado' });
     }
 
-    login(email, codeName || email.split('@')[0]);
     setLoading(false);
-    onClose();
-    window.location.href = '/dashboard';
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-      {/* Overlay */}
+    <div className="fixed inset-0 z-100 flex items-center justify-center" style={{ padding: '1rem' }}>
       <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose} />
-
-      {/* Modal */}
-      <div className="relative glass rounded-lg w-full max-w-md p-8 animate-scale-in">
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 text-[var(--text-dim)] hover:text-[var(--text)] transition-colors"
-        >
+      <div className="relative glass w-full max-w-md animate-scale-in" style={{ padding: '2rem' }}>
+        <button onClick={onClose} className="absolute top-4 right-4 text-[var(--text-dim)] hover:text-[var(--text)]">
           <X className="w-5 h-5" />
         </button>
 
-        <div className="text-center mb-8">
-          <Shield className="w-10 h-10 mx-auto mb-4 text-[var(--accent)]" />
+        <div className="text-center" style={{ marginBottom: '2rem' }}>
+          <Shield className="w-10 h-10 mx-auto text-[var(--accent)]" style={{ marginBottom: '1rem' }} />
           <h2 className="text-2xl font-bold">
             {mode === 'register' ? 'Aceitar a Missão' : 'Entrar no Sistema'}
           </h2>
-          <p className="text-sm text-[var(--text-muted)] mt-2">
-            {mode === 'register'
-              ? 'Crie seu perfil e comece a luta.'
-              : 'Acesse sua conta para continuar.'}
+          <p className="text-sm text-[var(--text-muted)]" style={{ marginTop: '0.5rem' }}>
+            {mode === 'register' ? 'Crie seu perfil e comece a luta.' : 'Acesse sua conta para continuar.'}
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={handleSubmit}>
           {mode === 'register' && (
-            <div>
-              <label className="block text-xs font-mono text-[var(--text-muted)] mb-2 uppercase tracking-wider">
+            <div style={{ marginBottom: '1.25rem' }}>
+              <label className="block text-xs font-mono text-[var(--text-muted)] uppercase tracking-wider" style={{ marginBottom: '0.5rem' }}>
                 Nome de Código
               </label>
               <input
@@ -130,14 +96,14 @@ export function AuthModal({ mode, onClose, onSwitchMode }: AuthModalProps) {
                 value={codeName}
                 onChange={e => setCodeName(e.target.value)}
                 placeholder="Ex: Fantasma7"
-                className="w-full px-4 py-3 bg-[var(--bg)] border border-[var(--border)] rounded text-[var(--text)] placeholder:text-[var(--text-dim)] focus:outline-none focus:border-[var(--accent)] transition-colors"
+                className="w-full px-4 py-3 bg-[var(--bg)] border border-[var(--border)] rounded text-[var(--text)] placeholder:text-[var(--text-dim)] focus:outline-none focus:border-[var(--accent)]"
               />
-              {errors.codeName && <p className="text-xs text-[var(--accent)] mt-1">{errors.codeName}</p>}
+              {errors.codeName && <p className="text-xs text-[var(--accent)]" style={{ marginTop: '0.25rem' }}>{errors.codeName}</p>}
             </div>
           )}
 
-          <div>
-            <label className="block text-xs font-mono text-[var(--text-muted)] mb-2 uppercase tracking-wider">
+          <div style={{ marginBottom: '1.25rem' }}>
+            <label className="block text-xs font-mono text-[var(--text-muted)] uppercase tracking-wider" style={{ marginBottom: '0.5rem' }}>
               Email
             </label>
             <input
@@ -145,13 +111,13 @@ export function AuthModal({ mode, onClose, onSwitchMode }: AuthModalProps) {
               value={email}
               onChange={e => setEmail(e.target.value)}
               placeholder="seu@email.com"
-              className="w-full px-4 py-3 bg-[var(--bg)] border border-[var(--border)] rounded text-[var(--text)] placeholder:text-[var(--text-dim)] focus:outline-none focus:border-[var(--accent)] transition-colors"
+              className="w-full px-4 py-3 bg-[var(--bg)] border border-[var(--border)] rounded text-[var(--text)] placeholder:text-[var(--text-dim)] focus:outline-none focus:border-[var(--accent)]"
             />
-            {errors.email && <p className="text-xs text-[var(--accent)] mt-1">{errors.email}</p>}
+            {errors.email && <p className="text-xs text-[var(--accent)]" style={{ marginTop: '0.25rem' }}>{errors.email}</p>}
           </div>
 
-          <div>
-            <label className="block text-xs font-mono text-[var(--text-muted)] mb-2 uppercase tracking-wider">
+          <div style={{ marginBottom: '1.25rem' }}>
+            <label className="block text-xs font-mono text-[var(--text-muted)] uppercase tracking-wider" style={{ marginBottom: '0.5rem' }}>
               Senha
             </label>
             <div className="relative">
@@ -160,36 +126,33 @@ export function AuthModal({ mode, onClose, onSwitchMode }: AuthModalProps) {
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 placeholder="••••••"
-                className="w-full px-4 py-3 bg-[var(--bg)] border border-[var(--border)] rounded text-[var(--text)] placeholder:text-[var(--text-dim)] focus:outline-none focus:border-[var(--accent)] transition-colors pr-12"
+                className="w-full px-4 py-3 bg-[var(--bg)] border border-[var(--border)] rounded text-[var(--text)] placeholder:text-[var(--text-dim)] focus:outline-none focus:border-[var(--accent)]"
+                style={{ paddingRight: '3rem' }}
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-dim)] hover:text-[var(--text-muted)]"
+                className="absolute right-3 top-1/2 text-[var(--text-dim)] hover:text-[var(--text-muted)]"
+                style={{ transform: 'translateY(-50%)' }}
               >
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
-            {errors.password && <p className="text-xs text-[var(--accent)] mt-1">{errors.password}</p>}
+            {errors.password && <p className="text-xs text-[var(--accent)]" style={{ marginTop: '0.25rem' }}>{errors.password}</p>}
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 bg-[var(--accent)] text-white font-bold rounded hover:bg-[var(--accent-light)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full py-3 bg-[var(--accent)] text-white font-bold rounded hover:bg-[var(--accent-light)] disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? 'PROCESSANDO...' : mode === 'register' ? 'CRIAR CONTA' : 'ENTRAR'}
           </button>
         </form>
 
-        <div className="mt-6 text-center">
-          <button
-            onClick={onSwitchMode}
-            className="text-sm text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors"
-          >
-            {mode === 'register'
-              ? 'Já tem conta? Faça login'
-              : 'Não tem conta? Aceite a missão'}
+        <div className="text-center" style={{ marginTop: '1.5rem' }}>
+          <button onClick={onSwitchMode} className="text-sm text-[var(--text-muted)] hover:text-[var(--accent)]">
+            {mode === 'register' ? 'Já tem conta? Faça login' : 'Não tem conta? Aceite a missão'}
           </button>
         </div>
       </div>

@@ -176,3 +176,148 @@ export const EMERGENCY_QUOTES = [
   'Você já sobreviveu 100% dos seus piores dias. Este é só mais um.',
   'A recaída dura minutos. O arrependimento dura dias.',
 ];
+
+// ==================== FUNIL — COMANDANTE (LIFELEVEL STRATEGY) ====================
+
+export const COMANDANTE_SPEECH_INITIAL = [
+  'Agente,',
+  'Eu sou o Comandante. E você está aqui porque algo dentro de você sabe que está perdendo tempo — e perdendo a si mesmo.',
+  'Redes sociais. Pornografia. Jogos. Eles foram projetados para manter você preso. Cada scroll, cada clique, cada partida — tudo calculado para hackear sua dopamina.',
+  'Mas existe uma saída. Não é força de vontade. É um sistema. Identidade. Ambiente. Substituição. Gamificação.',
+  'Antes de montar seu plano de batalha, preciso entender quem você é. Seus hábitos. Seus pontos fracos. Seus inimigos.',
+  'Vou fazer algumas perguntas. Responda com honestidade — sem julgamento. É só o ponto de partida.',
+];
+
+export const COMANDANTE_SPEECH_AFTER_QUIZ = [
+  'Perfeito, Agente.',
+  'Com seus dados, calculei seu perfil de ameaça. Isso me diz o poder real que esses vícios têm sobre você.',
+  'Com sua idade, sei em qual fase de vida você está. Isso muda como as missões vão ser calibradas.',
+  'Com seu vício principal, sei qual inimigo atacar primeiro. E com o tempo que você perde, sei o tamanho do dano.',
+  'Essa é a base. A partir dela, eu consigo montar um plano que faz sentido pra sua realidade.',
+  'Mas os dados objetivos são só a metade. Pra montar o plano completo, preciso entender como você se sente. Suas fraquezas. Suas forças.',
+  'É isso que vem agora.',
+];
+
+export const FUNIL_QUIZ_STEPS = [
+  {
+    id: 'name',
+    tag: 'IDENTIFICAÇÃO · 01/05',
+    question: 'Como devo te chamar, Agente?',
+    hint: 'Seu nome de código nesta operação.',
+    type: 'text' as const,
+    placeholder: 'Digite seu nome de código...',
+    minLength: 2,
+    maxLength: 24,
+  },
+  {
+    id: 'age',
+    tag: 'FASE · 02/05',
+    question: 'Qual a sua idade?',
+    hint: 'Isso ajuda a calibrar a dificuldade das missões.',
+    type: 'stepper' as const,
+    min: 12,
+    max: 80,
+    defaultValue: 25,
+    unit: 'anos',
+  },
+  {
+    id: 'primaryAddiction',
+    tag: 'INIMIGO PRINCIPAL · 03/05',
+    question: 'Qual vício mais te domina?',
+    hint: 'O inimigo que você quer derrotar primeiro.',
+    type: 'choice' as const,
+    options: [
+      { id: 'socialMedia', label: 'Redes Sociais', icon: '📱', desc: 'Scroll infinito, FOMO, dopamina barata' },
+      { id: 'pornography', label: 'Pornografia', icon: '🔞', desc: 'Destrói conexões reais e autoestima' },
+      { id: 'games', label: 'Jogos', icon: '🎮', desc: 'Conquistas virtuais no lugar das reais' },
+    ],
+  },
+  {
+    id: 'hoursPerDay',
+    tag: 'DANO · 04/05',
+    question: 'Quantas horas por dia você perde com isso?',
+    hint: 'Sem julgamento. É só o ponto de partida.',
+    type: 'choice' as const,
+    options: [
+      { id: '1-2', label: '1-2 horas', icon: '⏱️', desc: 'Leve, mas presente' },
+      { id: '3-4', label: '3-4 horas', icon: '⏰', desc: 'Moderado, já atrapalha' },
+      { id: '5+', label: '5+ horas', icon: '💀', desc: 'Grave, tomando conta' },
+    ],
+  },
+  {
+    id: 'quitAttempts',
+    tag: 'HISTÓRICO · 05/05',
+    question: 'Quantas vezes já tentou parar?',
+    hint: 'Cada tentativa foi um passo. Mesmo as que falharam.',
+    type: 'choice' as const,
+    options: [
+      { id: 'never', label: 'Nunca tentei', icon: '🆕', desc: 'Primeira vez aqui' },
+      { id: '1-3', label: '1-3 vezes', icon: '🔄', desc: 'Já lutou, mas caiu' },
+      { id: '4+', label: '4+ vezes', icon: '💪', desc: 'Guerreiro persistente' },
+    ],
+  },
+];
+
+export const FUNIL_ATTRIBUTES = [
+  {
+    id: 'disciplina',
+    label: 'Disciplina',
+    desc: 'Foco, rotina, consistência',
+    icon: '🎯',
+    color: '#22c55e',
+  },
+  {
+    id: 'autocontrole',
+    label: 'Autocontrole',
+    desc: 'Resistir a impulsos, adiar gratificação',
+    icon: '🛡️',
+    color: '#3b82f6',
+  },
+  {
+    id: 'conexoes',
+    label: 'Conexões Reais',
+    desc: 'Relacionamentos, presença social',
+    icon: '🤝',
+    color: '#f59e0b',
+  },
+  {
+    id: 'saude',
+    label: 'Saúde Mental',
+    desc: 'Clareza, equilíbrio emocional',
+    icon: '🧠',
+    color: '#a855f7',
+  },
+  {
+    id: 'produtividade',
+    label: 'Produtividade',
+    desc: 'Ações reais, conquistas concretas',
+    icon: '⚡',
+    color: '#ef4444',
+  },
+  {
+    id: 'proposito',
+    label: 'Propósito',
+    desc: 'Direção, sentido de vida',
+    icon: '🔥',
+    color: '#dc2626',
+  },
+];
+
+export const FUNIL_PROFILE_RESULTS: Record<string, { title: string; desc: string; severity: 'low' | 'medium' | 'high' | 'critical' }> = {
+  'socialMedia-1-2': { title: 'Vigiante Digital', desc: 'O inimigo está nas trincheiras, mas você ainda tem controle parcial. Hora de atacar antes que ele avance.', severity: 'low' },
+  'socialMedia-3-4': { title: 'Prisioneiro do Scroll', desc: 'O algoritmo já hackeou sua dopamina. Você rola sem pensar. Mas reconhecer isso é a primeira vitória.', severity: 'medium' },
+  'socialMedia-5+': { title: 'Refém das Redes', desc: 'Metade do seu dia acordado pertence ao inimigo. Isso não é lazer — é ocupação. Hora de retomar.', severity: 'high' },
+  'pornography-1-2': { title: 'Visitante Esporádico', desc: 'O inimigo aparece de vez em quando, mas já deixou marcas. Corte agora antes que vire hábito.', severity: 'low' },
+  'pornography-3-4': { title: 'Ciclo Repetitivo', desc: 'Sua dopamina foi sequestrada. Cada recaída reforça o circuito. Mas o circuito pode ser reescrito.', severity: 'medium' },
+  'pornography-5+': { title: 'Prisão Química', desc: 'Seu cérebro foi reconfigurado pelo vício. A saída existe — mas precisa de sistema, não força de vontade.', severity: 'critical' },
+  'games-1-2': { title: 'Jogador Casual', desc: 'O controle está nas suas mãos. Mas cuidado — a linha entre lazer e fuga é fina.', severity: 'low' },
+  'games-3-4': { title: 'Escapista Digital', desc: 'Você joga pra não pensar. Cada partida é uma fuga. Que tal trocar XP virtual por XP real?', severity: 'medium' },
+  'games-5+': { title: 'Mundo Paralelo', desc: 'Sua vida real está pausada enquanto você grinda no virtual. Hora de despertar do simulador.', severity: 'high' },
+};
+
+export const PACT_COMMITMENTS = [
+  'Eu me comprometo a lutar contra meus vícios digitais.',
+  'Eu aceito que força de vontade sozinha não basta — preciso de um sistema.',
+  'Eu escolho ser a pessoa que controla seus hábitos, não o contrário.',
+  'Eu darei o primeiro passo hoje. Não amanhã. Hoje.',
+];

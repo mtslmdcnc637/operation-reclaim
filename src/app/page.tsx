@@ -38,6 +38,10 @@ export default function LandingPage() {
     setShowAuth(true);
   };
 
+  const startFunil = () => {
+    window.location.href = '/funil/validacao';
+  };
+
   return (
     <div className="min-h-screen relative overflow-hidden">
       {/* Particles */}
@@ -82,7 +86,7 @@ export default function LandingPage() {
                 Entrar
               </button>
               <button
-                onClick={() => openAuth('register')}
+                onClick={startFunil}
                 className="px-4 py-2 bg-[var(--accent)] text-white text-sm font-semibold rounded hover:bg-[var(--accent-light)] transition-colors"
               >
                 ACEITAR A MISSÃO
@@ -107,7 +111,7 @@ export default function LandingPage() {
             <a href="#protocol" className="text-sm text-[var(--text-muted)] py-2">Protocolo</a>
             <a href="#pricing" className="text-sm text-[var(--text-muted)] py-2">Planos</a>
             <button onClick={() => openAuth('login')} className="text-sm text-[var(--text-muted)] py-2 text-left">Entrar</button>
-            <button onClick={() => openAuth('register')} className="px-4 py-2 bg-[var(--accent)] text-white text-sm font-semibold rounded">ACEITAR A MISSÃO</button>
+            <button onClick={startFunil} className="px-4 py-2 bg-[var(--accent)] text-white text-sm font-semibold rounded">ACEITAR A MISSÃO</button>
           </div>
         )}
       </nav>
@@ -134,7 +138,7 @@ export default function LandingPage() {
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-10">
             <button
-              onClick={() => openAuth('register')}
+              onClick={startFunil}
               className="px-8 py-4 bg-[var(--accent)] text-white font-bold text-lg tracking-wide hover:bg-[var(--accent-light)] transition-all animate-pulse-glow rounded"
             >
               ACEITAR A MISSÃO
@@ -326,7 +330,7 @@ export default function LandingPage() {
                   ))}
                 </ul>
                 <button
-                  onClick={() => openAuth('register')}
+                  onClick={startFunil}
                   className={`w-full py-3 rounded font-semibold text-sm transition-colors ${
                     plan.popular
                       ? 'bg-[var(--accent)] text-white hover:bg-[var(--accent-light)]'
@@ -353,7 +357,7 @@ export default function LandingPage() {
             Você deveria?
           </p>
           <button
-            onClick={() => openAuth('register')}
+            onClick={startFunil}
             className="px-10 py-5 bg-[var(--accent)] text-white font-bold text-xl tracking-wide hover:bg-[var(--accent-light)] transition-all animate-pulse-glow rounded"
           >
             ACEITAR A MISSÃO

@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { COMANDANTE_SPEECH_INITIAL, COMANDANTE_SPEECH_AFTER_QUIZ } from '@/lib/data';
+import { useComandanteVoice } from '@/lib/audio/useComandanteVoice';
 
 type SpeechPhase = 'initial' | 'afterQuiz';
 
@@ -19,6 +20,7 @@ function ValidacaoContent() {
   const searchParams = useSearchParams();
   const phase: SpeechPhase = (searchParams.get('phase') as SpeechPhase) || 'initial';
   const speech = phase === 'afterQuiz' ? COMANDANTE_SPEECH_AFTER_QUIZ : COMANDANTE_SPEECH_INITIAL;
+  const voice = useComandanteVoice(phase);
 
   const [isSpeaking, setIsSpeaking] = useState(true);
   const [currentParagraph, setCurrentParagraph] = useState(0);
@@ -38,6 +40,15 @@ function ValidacaoContent() {
       if (stored) setFunilData(JSON.parse(stored));
     } catch {}
   }, []);
+
+  // Start voice when component mounts (after user interaction from home)
+  useEffect(() => {
+    if (voice.hasAudio) {
+      // Small delay to allow user interaction to propagate
+      const timer = setTimeout(() => voice.play(), 500);
+      return () => clearTimeout(timer);
+    }
+  }, [voice.hasAudio]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Typewriter effect
   useEffect(() => {
@@ -80,13 +91,15 @@ function ValidacaoContent() {
 
   const skipSpeech = useCallback(() => {
     if (intervalRef.current) clearInterval(intervalRef.current);
+    voice.stop();
     setParagraphStates(speech.map(() => 'done'));
     setCurrentParagraph(speech.length);
     setIsSpeaking(false);
     setShowCta(true);
-  }, [speech]);
+  }, [speech, voice]);
 
   const handleCta = () => {
+    voice.stop();
     if (phase === 'initial') {
       router.push('/funil/quiz');
     } else {
@@ -100,7 +113,6 @@ function ValidacaoContent() {
     ? 'Redes Sociais' : funilData.primaryAddiction === 'pornography'
     ? 'Pornografia' : funilData.primaryAddiction === 'games'
     ? 'Jogos' : '—';
-  const hoursPerDay = funilData.hoursPerDay || '—';
 
   const agePhase = (age: string) => {
     const a = parseInt(age);
@@ -117,6 +129,21 @@ function ValidacaoContent() {
       {/* Chrome buttons */}
       <div className="funil-chrome">
         <button onClick={skipSpeech}>PULAR FALA</button>
+        {voice.hasAudio && (
+          <button className="volume-btn" onClick={voice.toggleMute} title={voice.isMuted ? 'Ativar som' : 'Silenciar'}>
+            {voice.isMuted ? (
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                <path d="M11 5L7 8H4v4h3l4 3V5z" fill="currentColor" />
+                <path d="M14 7.5l3 3M17 7.5l-3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              </svg>
+            ) : (
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                <path d="M11 5L7 8H4v4h3l4 3V5z" fill="currentColor" />
+                <path d="M14 7.5c1 .8 1.5 1.8 1.5 2.5s-.5 1.7-1.5 2.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              </svg>
+            )}
+          </button>
+        )}
       </div>
 
       {/* Orb */}
